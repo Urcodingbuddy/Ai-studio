@@ -26,6 +26,9 @@ export async function proxy(req: NextRequest) {
 export const config = {
   matcher: [
     '/explore',
+    '/images',
+    '/top',
+    '/likes',
     '/api/generations/:path*',
     '/login',
     '/signup',

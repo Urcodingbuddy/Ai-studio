@@ -29,7 +29,7 @@ export default function AuthForm({ mode }: Props) {
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        router.push('/dashboard');
+        router.push('/explore');
       }
     } catch (err: any) {
       setError(err.message);
