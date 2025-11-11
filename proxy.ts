@@ -10,13 +10,13 @@ export async function proxy(req: NextRequest) {
 
   const { pathname } = url;
 
-  if (!session && pathname.startsWith('/dashboard')) {
+  if (!session && (pathname.startsWith('/explore') || pathname.startsWith('/images') || pathname.startsWith('/top') || pathname.startsWith('/likes'))) {
     url.pathname = '/login';
     return NextResponse.redirect(url);
   }
 
   if (session && (pathname === '/login' || pathname === '/signup')) {
-    url.pathname = '/dashboard';
+    url.pathname = '/explore';
     return NextResponse.redirect(url);
   }
 
@@ -25,7 +25,7 @@ export async function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
-    '/dashboard/:path*',
+    '/explore',
     '/api/generations/:path*',
     '/login',
     '/signup',

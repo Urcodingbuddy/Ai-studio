@@ -24,7 +24,6 @@ export async function POST(req: Request) {
       enhancePrompt = true,
       referenceImages = [],
     } = await req.json();
-
     if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
       return NextResponse.json(
         { success: false, error: "Prompt is required" },
