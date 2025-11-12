@@ -13,14 +13,14 @@ export default function DashboardLayout({
   return (
     <div className="bg-black text-white flex min-h-screen">
       {/* Sidebar - Fixed */}
-      <div className="fixed left-0 top-0 h-screen w-64 border-r border-zinc-800 bg-zinc-950 z-40">
+      <div className="fixed left-0 top-0 h-screen w-54 bg-zinc-950 z-40">
         <Sidebar />
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 ml-64 flex flex-col min-h-screen relative">
+      <div className="flex-1 ml-54 flex flex-col min-h-screen relative">
         {/* Header - Sticky */}
-        <div className="sticky top-0 z-30 border-b border-zinc-800 bg-zinc-950/90 backdrop-blur-lg">
+        <div className="sticky top-0 z-30 bg-zinc-950/90 backdrop-blur-lg">
           <Header />
         </div>
 
