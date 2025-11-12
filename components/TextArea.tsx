@@ -293,8 +293,6 @@ const [showVariations, setShowVariations] = useState(false);
     )}
   </button>
 </div>
-
-
       {/* Cuisine Selector */}
       {foodMode && (
         <div className="px-6 pb-6 border-t border-zinc-800 pt-4">
@@ -320,22 +318,6 @@ const [showVariations, setShowVariations] = useState(false);
               </button>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Error Message */}
-      {error && (
-        <div className="mt-4 flex items-start gap-3 p-4 rounded-2xl bg-red-500/10 border border-red-500/20">
-          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-red-200">{error}</p>
-        </div>
-      )}
-
-      {/* Success Message */}
-      {success && (
-        <div className="mt-4 flex items-start gap-3 p-4 rounded-2xl bg-green-500/10 border border-green-500/20">
-          <Check className="w-5 h-5 text-green-400 shrink-0 mt-0.5" />
-          <p className="text-sm text-green-200">Successfully generated!</p>
         </div>
       )}
     </div>
