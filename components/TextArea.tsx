@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import {
   ChefHat,
   Sparkles,
@@ -79,7 +79,7 @@ export default function TextArea({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = () => fileInputRef.current?.click();
-
+const [showVariations, setShowVariations] = useState(false);
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
@@ -98,197 +98,202 @@ export default function TextArea({
   };
 
   return (
-    <div className="rounded-2xl bg-zinc-900/70 backdrop-blur-xl border border-zinc-800/60 shadow-lg  transition-all duration-300">
-      {/* Top Bar */}
-      {/* Top Section: Upload + Previews + Textarea + Enhance Button */}
-      <div className="flex flex-col gap-3 px-4 pt-4">
-        {/* Image Upload and Previews */}
-        <div className="flex items-start gap-3">
-          {/* Uploaded Images */}
-          {referenceImages.length > 0 && (
-            <div className="flex items-center gap-2">
-              {referenceImages.map((src, i) => (
-                <div
-                  key={i}
-                  className="relative w-24 h-24 rounded-lg overflow-hidden border border-zinc-800 group"
-                >
-                  <img
-                    src={src}
-                    alt={`ref-${i}`}
-                    className="object-cover w-full h-full"
-                  />
-                  <button
-                    onClick={() =>
-                      setReferenceImages(
-                        referenceImages.filter((_, idx) => idx !== i)
-                      )
-                    }
-                    className="absolute top-1 right-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-
-              {/* Add More Button */}
-              <button
-                onClick={handleFileUpload}
-                className="w-24 h-24 flex items-center justify-center rounded-lg border border-zinc-700 hover:bg-zinc-800 transition shrink-0"
-                title="Add another image"
-              >
-                <Plus className="w-6 h-6 text-zinc-400" />
-              </button>
-            </div>
-          )}
-
-          {/* Initial Upload Button (only visible when no image uploaded) */}
-          {referenceImages.length === 0 && (
-            <button
-              onClick={handleFileUpload}
-              className="p-2 hover:bg-zinc-800 rounded-lg transition shrink-0"
-              title="Upload image"
-            >
-              <Plus className="w-5 h-5 text-zinc-400" />
-            </button>
-          )}
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handleFileChange}
-            className="hidden"
-          />
-        </div>
-
-        {/* Textarea and Enhance Prompt Button */}
-        <div className="flex items-center justify-between gap-3">
-          <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Describe your image..."
-            disabled={loading}
-            rows={1}
-            className="flex-1 max-h-100 bg-transparent text-base text-zinc-200 outline-none resize-none placeholder:text-zinc-500 disabled:opacity-50 px-2 py-2 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent scrollbar-thumb-rounded-full"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                onGenerate();
-              }
-            }}
-            style={{
-              height: "auto",
-              minHeight: "40px",
-            }}
-            onInput={(e) => {
-              const target = e.target as HTMLTextAreaElement;
-              target.style.height = "auto"; // reset height
-              target.style.height = `${Math.min(target.scrollHeight, 360)}px`;
-            }}
-          />
-
-          <button
-            onClick={() => setEnhancePrompt(!enhancePrompt)}
-            className={`p-2 rounded-lg transition shrink-0 ${
-              enhancePrompt
-                ? "bg-purple-500/20 text-purple-400"
-                : "hover:bg-zinc-800 text-zinc-400"
-            }`}
-            title="Toggle Enhance Prompt"
-          >
-            <Wand2 className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Bottom Controls */}
-      <div className="flex items-center justify-between px-4 pb-4">
-        <div className="flex items-center gap-2">
-          {/* Aspect Ratio */}
-          <div className="relative">
-            <button
-              onClick={() => setShowAspectRatio(!showAspectRatio)}
-              disabled={loading}
-              className="px-3 py-1.5 rounded-lg bg-zinc-800/70 hover:bg-zinc-700/70 transition text-sm text-zinc-300 flex items-center gap-1"
-            >
-              <span>{aspectRatio}</span>
-              <ChevronUp className="w-4 h-4" />
-            </button>
-
-            {showAspectRatio && (
-              <div className="absolute bottom-full left-0 mb-1 bg-zinc-900/90 backdrop-blur-xl border border-zinc-700 rounded-lg shadow-xl overflow-hidden z-50 min-w-[100px]">
-                {ASPECT_RATIOS.map((ratio) => (
-                  <button
-                    key={ratio.value}
-                    onClick={() => {
-                      setAspectRatio(ratio.value as any);
-                      setShowAspectRatio(false);
-                    }}
-                    className={`w-full px-3 py-2 text-left text-sm hover:bg-zinc-800 transition ${
-                      aspectRatio === ratio.value
-                        ? "bg-zinc-800 text-white"
-                        : "text-zinc-300"
-                    }`}
-                  >
-                    {ratio.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Image count */}
-          <div className="flex items-center bg-zinc-800/70 rounded-lg p-0.5">
-            {[1, 2, 3, 4].map((n) => (
-              <button
-                key={n}
-                onClick={() => setNumberOfImages(n)}
-                disabled={loading}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
-                  numberOfImages === n
-                    ? "bg-zinc-700 text-white"
-                    : "text-zinc-400 hover:text-white hover:bg-zinc-700/50"
-                }`}
-              >
-                {n}V
-              </button>
-            ))}
-          </div>
-
-          {/* Food Mode */}
-          <button
-            onClick={() => setFoodMode(!foodMode)}
-            disabled={loading}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
-              foodMode
-                ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
-                : "bg-zinc-800/70 text-zinc-400 hover:bg-zinc-700/70"
-            }`}
-          >
-            <ChefHat className="w-4 h-4" />
-            <span>Food Mode</span>
-          </button>
-        </div>
-
-        {/* Generate Button */}
-        <button
-          onClick={onGenerate}
-          disabled={loading || !prompt.trim()}
-          className="px-5 py-2 rounded-full bg-white hover:bg-white/80 text-black text-sm font-medium flex items-center gap-2 disabled:opacity-50 transition"
+<div className="rounded-2xl bg-zinc-900/70 backdrop-blur-xl shadow-lg transition-all duration-300">
+  {/* Top Section */}
+<div className="flex flex-col gap-3 px-4 py-4">
+  {/* Image previews above the plus icon */}
+  {referenceImages.length > 0 && (
+    <div className="flex items-center gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent pb-1">
+      {referenceImages.map((src, i) => (
+        <div
+          key={i}
+          className="relative w-20 h-20 rounded-lg overflow-hidden border border-zinc-700 group shrink-0"
         >
-          {loading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Generating</span>
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-4 h-4" />
-              <span>Generate</span>
-            </>
-          )}
+          <img
+            src={src}
+            alt={`ref-${i}`}
+            className="object-cover w-full h-full"
+          />
+          <button
+            onClick={() =>
+              setReferenceImages(referenceImages.filter((_, idx) => idx !== i))
+            }
+            className="absolute top-1 right-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition"
+          >
+            ✕
+          </button>
+        </div>
+      ))}
+    </div>
+  )}
+
+  {/* Upload + Textarea + Wand */}
+  <div className="flex items-start gap-3">
+    {/* Upload Button */}
+    <div className="flex items-start">
+      <button
+        onClick={handleFileUpload}
+        className="p-2 hover:bg-zinc-800 rounded-lg transition shrink-0"
+        title="Upload image"
+      >
+        <Plus className="w-5 h-5 text-white" />
+      </button>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={handleFileChange}
+        className="hidden"
+      />
+    </div>
+
+    {/* Textarea — expands to fill available space */}
+    <div className="flex-1 flex items-center">
+      <textarea
+        value={prompt}
+        onChange={(e) => setPrompt(e.target.value)}
+        placeholder="Describe your image..."
+        disabled={loading}
+        rows={1}
+        className="w-full bg-transparent text-base text-zinc-200 outline-none resize-none placeholder:text-zinc-500 disabled:opacity-50 px-3 py-2 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent scrollbar-thumb-rounded-full"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+            onGenerate();
+          }
+        }}
+        style={{ height: "auto", minHeight: "40px" }}
+        onInput={(e) => {
+          const target = e.target as HTMLTextAreaElement;
+          target.style.height = "auto";
+          target.style.height = `${Math.min(target.scrollHeight, 360)}px`;
+        }}
+      />
+    </div>
+
+    {/* Wand Icon */}
+    <div className="flex items-center">
+      <button
+        onClick={() => setEnhancePrompt(!enhancePrompt)}
+        className={`p-2 rounded-lg transition shrink-0 ${
+          enhancePrompt
+            ? "bg-purple-500/20 text-purple-400"
+            : "hover:bg-zinc-800 text-zinc-400"
+        }`}
+        title="Toggle Enhance Prompt"
+      >
+        <Wand2 className="w-5 h-5" />
+      </button>
+    </div>
+    </div>
+
+
+  </div>
+{/* Bottom Controls */}
+<div className="flex items-center justify-between px-4 pb-4">
+  <div className="flex items-center gap-2">
+    {/* Aspect Ratio */}
+    <div className="relative">
+      <button
+        onClick={() => setShowAspectRatio(!showAspectRatio)}
+        disabled={loading}
+        className="px-3 py-1.5 rounded-lg bg-transparent backdrop-blur-md border border-white/10 hover:border-white/20 transition text-sm text-white/80 flex items-center gap-1"
+      >
+        <span>{aspectRatio}</span>
+        <ChevronUp className="w-4 h-4" />
+      </button>
+
+      {showAspectRatio && (
+        <div className="absolute bottom-full left-0 mb-1 bg-zinc-900/80 backdrop-blur-xl border border-white/10 rounded-lg shadow-lg overflow-hidden z-50 min-w-[100px]">
+          {ASPECT_RATIOS.map((ratio) => (
+            <button
+              key={ratio.value}
+              onClick={() => {
+                setAspectRatio(ratio.value as any);
+                setShowAspectRatio(false);
+              }}
+              className={`w-full px-3 py-2 text-left text-sm transition ${
+                aspectRatio === ratio.value
+                  ? "bg-white/10 text-white"
+                  : "text-zinc-300 hover:bg-white/5"
+              }`}
+            >
+              {ratio.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+
+    {/* Variations (image count) as popover */}
+    <div className="relative">
+  <button
+    onClick={() => setShowVariations(!showVariations)}
+    disabled={loading}
+    className="px-3 py-1.5 rounded-lg bg-transparent backdrop-blur-md border border-white/10 hover:border-white/20 transition text-sm text-white/80 flex items-center gap-1"
+  >
+    <span>{numberOfImages}V</span>
+    <ChevronUp className="w-4 h-4" />
+  </button>
+
+  {showVariations && (
+    <div className="absolute bottom-full left-0 mb-1 bg-zinc-900/80 backdrop-blur-xl border border-white/10 rounded-lg shadow-lg overflow-hidden z-50 min-w-[100px]">
+      {[1, 2, 3, 4].map((n) => (
+        <button
+          key={n}
+          onClick={() => {
+            setNumberOfImages(n);
+            setShowVariations(false);
+          }}
+          className={`w-full flex px-2 py-2 text-left text-sm transition ${
+            numberOfImages === n
+              ? "bg-white/10 text-white"
+              : "text-zinc-300 hover:bg-white/5"
+          }`}
+        >
+          {n} Variations
         </button>
-      </div>
+      ))}
+    </div>
+  )}
+</div>
+
+    {/* Food Mode */}
+    <button
+      onClick={() => setFoodMode(!foodMode)}
+      disabled={loading}
+      className={`px-3 py-1.5 rounded-lg text-sm font-medium backdrop-blur-md border transition flex items-center gap-2 ${
+        foodMode
+          ? "bg-orange-500/10 text-orange-400 border-orange-500/30"
+          : "bg-transparent border-white/10 text-white/70 hover:border-white/20"
+      }`}
+    >
+      <ChefHat className="w-4 h-4" />
+      <span>Food Mode</span>
+    </button>
+  </div>
+
+  {/* Generate Button */}
+  <button
+    onClick={onGenerate}
+    disabled={loading || !prompt.trim()}
+    className="px-5 py-2 rounded-full bg-white cursor-pointer disabled:cursor-auto disabled:text-[#5F5F5F] disabled:bg-[#1f1f1f] text-black text-sm font-medium flex items-center gap-2 transition"
+  >
+    {loading ? (
+      <>
+        <Loader2 className="w-4 h-4 animate-spin" />
+        <span>Generating</span>
+      </>
+    ) : (
+      <>
+        <Sparkles className="w-4 h-4" />
+        <span>Generate</span>
+      </>
+    )}
+  </button>
+</div>
+
 
       {/* Cuisine Selector */}
       {foodMode && (
@@ -329,7 +334,7 @@ export default function TextArea({
       {/* Success Message */}
       {success && (
         <div className="mt-4 flex items-start gap-3 p-4 rounded-2xl bg-green-500/10 border border-green-500/20">
-          <Check className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+          <Check className="w-5 h-5 text-green-400 shrink-0 mt-0.5" />
           <p className="text-sm text-green-200">Successfully generated!</p>
         </div>
       )}
