@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Paytone_One, Space_Grotesk } from "next/font/google";
 import "./globals.css";
-
+import { Toaster } from "sonner";
 const paytoneOne = Paytone_One({
   subsets: ["latin"],
   weight: "400"
@@ -27,6 +27,7 @@ export default function RootLayout({
       <body
         className={`${spaceGrotesk.className} antialiased`}
       >
+        <Toaster richColors position="top-right" />
         {children}
       </body>
     </html>
