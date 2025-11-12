@@ -14,9 +14,9 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-60 p-4 flex flex-col">
-      <div className="text-2xl font-bold tracking-tight mb-8 text-white">
-        AI Studio
+    <aside className="w-50 p-4 flex flex-col">
+      <div className="flex items-center justify-start gap-2 text-2xl font-bold tracking-tight mb-8 text-white">
+        <img src="./CS_Star_4.png" className="w-7" alt="Logo" /> AI Studio
       </div>
 
       <nav className="space-y-2">
