@@ -2,8 +2,14 @@
 
 import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
-import { Heart, Eye, Loader2 } from "lucide-react";
-import { fetchImages, getOptimizedImageUrl, type Generation } from "@/lib/images/fetch";
+import { Heart, Loader2 } from "lucide-react";
+import {
+  fetchImages,
+  getOptimizedImageUrl,
+  type Generation,
+} from "@/lib/images/fetch";
+import { useUser } from "@/lib/auth/useUser";
+import ImageCard from "@/components/ImageCard";
 
 export default function ExplorePage() {
   const [images, setImages] = useState<Generation[]>([]);
@@ -11,22 +17,20 @@ export default function ExplorePage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
-  
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
-
+  const { user, loading: userLoading } = useUser();
   const ITEMS_PER_PAGE = 20;
-
   const loadImages = async (isInitial = false) => {
     if (!hasMore && !isInitial) return;
 
     try {
       isInitial ? setLoading(true) : setLoadingMore(true);
-      
+
       const currentOffset = isInitial ? 0 : offset;
-      
+
       const { data, error } = await fetchImages({
-        orderBy: 'created_at',
+        orderBy: "created_at",
         ascending: false,
         limit: ITEMS_PER_PAGE,
         offset: currentOffset,
@@ -38,7 +42,7 @@ export default function ExplorePage() {
         setHasMore(false);
       }
 
-      setImages(prev => isInitial ? data : [...prev, ...data]);
+      setImages((prev) => (isInitial ? data : [...prev, ...data]));
       setOffset(currentOffset + data.length);
     } catch (err: any) {
       console.error("Error fetching images:", err.message);
@@ -61,7 +65,7 @@ export default function ExplorePage() {
           loadImages();
         }
       },
-      { threshold: 0.5, rootMargin: '200px' }
+      { threshold: 0.5, rootMargin: "200px" }
     );
 
     if (loadMoreRef.current) {
@@ -88,16 +92,17 @@ export default function ExplorePage() {
           <>
             <div className="columns-1 sm:columns-2 lg:columns-3 gap-2 [column-fill:balance]">
               {images.map((img, index) => (
-                <ImageCard 
-                  key={`${img.id}-${img.image_path}-${index}`} 
-                  img={img} 
+                <ImageCard
+                  key={`${img.id}-${img.image_path}-${index}`}
+                  img={img}
+                  user_id={user?.id}
                 />
               ))}
             </div>
-            
+
             {hasMore && (
-              <div 
-                ref={loadMoreRef} 
+              <div
+                ref={loadMoreRef}
                 className="flex justify-center items-center py-8"
               >
                 {loadingMore && (
@@ -126,67 +131,7 @@ const shimmer = (w: number, h: number) => `
   <animate xlink:href="#r" attributeName="x" from="-${w}" to="${w}" dur="1s" repeatCount="indefinite"  />
 </svg>`;
 
-const toBase64 = (str: string) =>
-  typeof window === "undefined"
-    ? Buffer.from(str).toString("base64")
-    : window.btoa(str);
 
-function ImageCard({ img }: { img: Generation }) {
-  const [isVisible, setIsVisible] = useState(false);
-  const imgRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.disconnect();
-        }
-      },
-      { 
-        rootMargin: '100px',
-        threshold: 0.01
-      }
-    );
 
-    if (imgRef.current) {
-      observer.observe(imgRef.current);
-    }
 
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <div
-      ref={imgRef}
-      className="relative mb-2 break-inside-avoid group overflow-hidden"
-    >
-      {isVisible ? (
-        <>
-          <Image
-            src={getOptimizedImageUrl(img.image_path, 400)}
-            alt={img.title || "Generated"}
-            width={400}
-            height={400}
-            className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-            loading="lazy"
-            quality={75}
-            placeholder="blur"
-            blurDataURL={`data:image/svg+xml;base64,${toBase64(shimmer(400, 400))}`}
-          />
-          <div className="absolute inset-0 bg-linear-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="absolute bottom-0 left-0 right-0 p-1 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <p className="text-xs text-zinc-300 truncate p-1 max-w-[75%]">
-              {img.enhanced_prompt || img.original_prompt || "AI Generated"}
-            </p>
-            <div className="flex items-center backdrop-blur-xl px-2 py-2 gap-2">
-              <Heart className="w-4 h-4 text-zinc-400 hover:text-red-500 transition cursor-pointer" />
-            </div>
-          </div>
-        </>
-      ) : (
-        <div className="w-full aspect-square bg-zinc-900 animate-pulse" />
-      )}
-    </div>
-  );
-}
