@@ -3,9 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import * as fs from "node:fs/promises";
 
-// ---------- ADMIN CLIENT (Service Role for DB + Storage) ----------
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE!
@@ -13,7 +11,6 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: Request) {
   try {
-    // ---------- PARSE REQUEST ----------
     const {
       prompt,
       dishName,
@@ -39,7 +36,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // ---------- AUTHENTICATE USER ----------
     const cookieStore = await cookies();
 
     const supabase = createServerClient(
@@ -48,7 +44,7 @@ export async function POST(req: Request) {
       {
         cookies: {
           getAll: () => cookieStore.getAll(),
-          setAll: async () => {}, // server route doesn't modify cookies
+          setAll: async () => {},
         },
       }
     );
@@ -69,40 +65,70 @@ export async function POST(req: Request) {
     const ai = new GoogleGenAI({ apiKey });
     let enhancedPrompt = prompt.trim();
 
-    // ---------- STEP 1: PROMPT ENHANCEMENT ----------
-    if (enhancePrompt) {
-      try {
-        const context = foodMode
-          ? "Enhance this prompt for professional restaurant food photography — focus on realistic lighting, texture, plating, and depth."
-          : "Enhance this prompt for high-quality, visually detailed, photorealistic imagery.";
+   if (enhancePrompt) {
+  try {
+    const context = foodMode
+      ? "Enhance this prompt for professional restaurant food photography — focus on realistic lighting, texture, plating, and depth."
+      : "Enhance this prompt for high-quality, visually detailed, photorealistic imagery.";
 
-        const enhancement = await ai.models.generateContent({
-          model: "gemini-2.5-flash",
-          contents: [
-            { role: "user", parts: [{ text: `${context}\n${prompt}` }] },
-          ],
-        });
+    const enhancement = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: `
+You are an image-prompt enhancement engine.
 
-        const out =
-          (enhancement as any).output_text ??
-          (enhancement as any).candidates?.[0]?.content?.parts
-            ?.map((p: any) => p.text)
-            .join(" ");
+RULES:
+1. Output ONLY the enhanced prompt text.
+2. No explanations, no bullet points, no markdown.
+3. No assistant-style tone.
+4. No commentary.
+5. 200–800 characters only.
+6. Pure descriptive visual prompt.
+7. Must NOT wrap the output in quotes.
+8. Must NOT say "Here is your enhanced prompt".
 
-        if (out && typeof out === "string") enhancedPrompt = out.trim();
-      } catch (err) {
-        console.warn("Prompt enhancement failed, fallback to original prompt");
-      }
+CONTEXT:
+${context}
+
+USER PROMPT:
+"${prompt}"
+
+RETURN ONLY THE ENHANCED PROMPT:
+`
+            }
+          ]
+        }
+      ]
+    });
+
+    // ----------------------------------------
+    // FIX: cast to any so TS stops complaining
+    // ----------------------------------------
+    const out =
+      (enhancement as any).output_text ??
+      (enhancement as any).candidates?.[0]?.content?.parts
+        ?.map((p: any) => p.text)
+        .join(" ");
+
+    if (out && typeof out === "string") {
+      enhancedPrompt = out.trim();
     }
+  } catch (err) {
+    console.warn("Prompt enhancement failed, fallback to original prompt");
+  }
+}
 
-    // ---------- STEP 2: BUILD FINAL PROMPT ----------
+
     const basePrompt = foodMode
       ? `Restaurant-style photograph of ${
           dishName || "a dish"
         } — ${enhancedPrompt}`
       : enhancedPrompt;
 
-    // ---------- STEP 3: INCLUDE REFERENCE IMAGES ----------
     const imageParts: any[] = [{ text: basePrompt }];
     for (const img of referenceImages) {
       if (typeof img === "string" && img.startsWith("data:image/")) {
@@ -115,7 +141,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // ---------- STEP 4: IMAGE GENERATION ----------
     const response = await ai.models.generateImages({
       model: "imagen-4.0-ultra-generate-001",
       prompt: basePrompt,
@@ -135,7 +160,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // ---------- STEP 5: SAVE IMAGES TO SUPABASE STORAGE ----------
     const publicUrls: string[] = [];
     for (let i = 0; i < response.generatedImages.length; i++) {
       const imgBytes = response.generatedImages[i]?.image?.imageBytes;
@@ -153,17 +177,8 @@ export async function POST(req: Request) {
         .from("generations")
         .getPublicUrl(filePath);
       if (pub?.publicUrl) publicUrls.push(pub.publicUrl);
-
-      if (process.env.NODE_ENV === "development") {
-        await fs.mkdir("./public/generated", { recursive: true });
-        await fs.writeFile(
-          `./public/generated/${user.id}_${Date.now()}_${i + 1}.png`,
-          buffer
-        );
-      }
     }
 
-    // ---------- STEP 6: FOOD MODE — RECIPE + INGREDIENTS ----------
     let recipe: string | null = null;
     let ingredients: string | null = null;
 
@@ -176,7 +191,7 @@ export async function POST(req: Request) {
               role: "user",
               parts: [
                 {
-                  text: `Create a professional recipe for ${dishName}.
+                  text: `Create a professional & highly detailed recipe for ${dishName}.
 Format exactly as:
 Ingredients:
 - item 1
@@ -209,7 +224,6 @@ Recipe:
       }
     }
 
-    // ---------- STEP 7: STORE METADATA ----------
     try {
       await supabaseAdmin.from("generations").insert([
         {
@@ -226,7 +240,6 @@ Recipe:
       console.warn("Database insert failed:", err);
     }
 
-    // ---------- RETURN ----------
     return NextResponse.json({
       success: true,
       images: publicUrls,
