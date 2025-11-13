@@ -11,6 +11,7 @@ export interface Generation {
   like_count?: number | null;
   created_at: string;
   title?: string | null;
+  user_liked?: boolean;
 }
 
 export interface FetchImagesParams {

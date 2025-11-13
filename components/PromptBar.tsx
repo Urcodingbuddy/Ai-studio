@@ -1,33 +1,40 @@
 "use client";
 import TextArea from "@/components/TextArea";
-import { useState, useRef } from "react";
-import { Sparkles, Download, Wand2 } from "lucide-react";
+import { useState } from "react";
 
-export default function Dashboard() {
+export default function PromptBar({
+  loading,
+  setLoading,
+  numberOfImages,
+  setNumberOfImages,
+}: {
+  loading: boolean;
+  setLoading: React.Dispatch<React.SetStateAction<boolean>>;
+  numberOfImages: number;
+  setNumberOfImages: React.Dispatch<React.SetStateAction<number>>;
+}) {
   const [prompt, setPrompt] = useState("");
-  const [numberOfImages, setNumberOfImages] = useState(1);
   const [aspectRatio, setAspectRatio] = useState<
     "1:1" | "3:4" | "4:3" | "9:16" | "16:9"
   >("1:1");
   const [foodMode, setFoodMode] = useState(false);
-  const [enhancePrompt, setEnhancePrompt] = useState(true);
+  const [enhancePrompt, setEnhancePrompt] = useState(false);
   const [selectedCuisine, setSelectedCuisine] = useState("italian");
   const [showAspectRatio, setShowAspectRatio] = useState(false);
   const [images, setImages] = useState<string[]>([]);
   const [recipe, setRecipe] = useState<string | null>(null);
   const [ingredients, setIngredients] = useState<string | null>(null);
   const [enhancedPrompt, setEnhancedPrompt] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [referenceImages, setReferenceImages] = useState<string[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   async function onGenerate() {
     if (!prompt.trim()) {
       setError("Please describe your image");
       return;
     }
-
+    const currentPrompt = prompt;
+    setPrompt("");
     setError(null);
     setSuccess(false);
     setLoading(true);
@@ -35,14 +42,15 @@ export default function Dashboard() {
     setRecipe(null);
     setIngredients(null);
     setEnhancedPrompt("");
-
     try {
       const res = await fetch("/api/generateImage", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt,
-          dishName: foodMode ? prompt.split(",")[0].trim() : "Generated Image",
+          prompt: currentPrompt,
+          dishName: foodMode
+            ? currentPrompt.split(",")[0].trim()
+            : "Generated Image",
           numberOfImages,
           aspectRatio,
           foodMode,
@@ -50,7 +58,6 @@ export default function Dashboard() {
           cuisineType: selectedCuisine,
         }),
       });
-
       const data = await res.json();
 
       if (!res.ok || !data.success) {
@@ -73,6 +80,7 @@ export default function Dashboard() {
       setLoading(false);
     }
   }
+
   return (
     <div>
       <TextArea

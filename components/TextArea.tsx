@@ -7,8 +7,6 @@ import {
   Loader2,
   Wand2,
   Plus,
-  AlertCircle,
-  Check,
   ChevronUp,
 } from "lucide-react";
 
@@ -72,8 +70,6 @@ export default function TextArea({
   selectedCuisine,
   setSelectedCuisine,
   loading,
-  error,
-  success,
   onGenerate,
 }: PromptInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -98,9 +94,9 @@ const [showVariations, setShowVariations] = useState(false);
   };
 
   return (
-<div className="rounded-2xl bg-zinc-900/70 backdrop-blur-xl shadow-lg transition-all duration-300">
+<div className="rounded-2xl bg-zinc-900/70 backdrop-blur-sm shadow-lg transition-all duration-300">
   {/* Top Section */}
-<div className="flex flex-col gap-3 px-4 py-4">
+<div className="flex flex-col gap-3 px-4 pt-4 pb-2">
   {/* Image previews above the plus icon */}
   {referenceImages.length > 0 && (
     <div className="flex items-center gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent pb-1">

@@ -1,11 +1,11 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Compass, Image, Star, Heart } from "lucide-react";
+import { Compass, Hamburger, Star, Heart } from "lucide-react";
 
 const navItems = [
   { name: "Explore", icon: Compass, href: "/explore" },
-  { name: "Images", icon: Image, href: "/images" },
+  { name: "Food", icon: Hamburger, href: "/food" },
   { name: "Top", icon: Star, href: "/top" },
   { name: "Likes", icon: Heart, href: "/likes" },
 ];
