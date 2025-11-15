@@ -95,8 +95,12 @@ export default function Header({ loading, numberOfImages }: HeaderProps) {
           </button>
         )}
 
-        <button className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center text-sm font-bold">
-          U
+        <button className="w-10 h-10 rounded-full bg-black flex items-center justify-center text-sm font-bold">
+          <img
+            src="https://lh3.googleusercontent.com/a/ACg8ocJgz92ndqaUxVRp_mGFt72-BtqdTt2nwVdi_pb3NfynFaI0ceOQ=s96-c"
+            alt="U"
+            className="w-8 h-8 rounded-full object-cover"
+          />
         </button>
       </div>
     </header>
