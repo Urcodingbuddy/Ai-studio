@@ -23,12 +23,15 @@ export default function StartAuthPage() {
     const data = await res.json();
     setLoading(false);
 
-    if (data.status === "existing-user") {
-      setResult("Existing user — show password form next.");
-    } else if (data.status === "new-user") {
-      setResult("New user — redirect to signup flow.");
-    } else {
+    if (!res.ok) {
       setResult(data.error || "Unknown error");
+      return;
+    }
+
+    if (data.exists === true) {
+      setResult("Existing user — show password form next.");
+    } else if (data.exists === false) {
+      setResult("New user — redirect to signup flow.");
     }
   }
 
@@ -48,7 +51,9 @@ export default function StartAuthPage() {
           onChange={(e) => setEmail(e.target.value)}
           required
         />
-        <div className="w-full bg-white/60 border rounded-full"></div>
+
+        <div className="w-full border-t border-zinc-700" />
+
         <div className="w-full flex flex-col justify-center items-center">
           <h6>Please verify you are not a robot</h6>
           <Turnstile
