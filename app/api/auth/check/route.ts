@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 async function verifyTurnstile(token: string | undefined, req: Request) {
-  if (!token) return false;
+  if (!token) {
+    return false
+  }
 
   const ip =
     req.headers.get("CF-Connecting-IP") ||
@@ -41,10 +43,7 @@ export async function POST(req: Request) {
   if (process.env.CLOUDFLARE_TURNSTILE_SECRET) {
     const valid = await verifyTurnstile(token, req);
     if (!valid) {
-      return NextResponse.json(
-        { error: "turnstile_failed" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "turnstile_failed" }, { status: 400 });
     }
   }
 
