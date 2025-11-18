@@ -29,7 +29,7 @@ const ASPECT_RATIOS = [
   { value: "16:9", label: "16:9" },
 ];
 
-interface PromptInputProps {
+interface TextAreaProps {
   prompt: string;
   setPrompt: (v: string) => void;
   referenceImages: string[];
@@ -48,7 +48,6 @@ interface PromptInputProps {
   setSelectedCuisine: (v: string) => void;
   loading: boolean;
   error: string | null;
-  success: boolean;
   onGenerate: () => void;
 }
 
@@ -70,15 +69,18 @@ export default function TextArea({
   selectedCuisine,
   setSelectedCuisine,
   loading,
+  error,
   onGenerate,
-}: PromptInputProps) {
+}: TextAreaProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showVariations, setShowVariations] = useState(false);
 
   const handleFileUpload = () => fileInputRef.current?.click();
-const [showVariations, setShowVariations] = useState(false);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
+    
     for (const file of Array.from(files)) {
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -94,201 +96,208 @@ const [showVariations, setShowVariations] = useState(false);
   };
 
   return (
-<div className="rounded-2xl bg-zinc-900/70 backdrop-blur-sm shadow-lg transition-all duration-300">
-  {/* Top Section */}
-<div className="flex flex-col gap-3 px-4 pt-4 pb-2">
-  {/* Image previews above the plus icon */}
-  {referenceImages.length > 0 && (
-    <div className="flex items-center gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent pb-1">
-      {referenceImages.map((src, i) => (
-        <div
-          key={i}
-          className="relative w-20 h-20 rounded-lg overflow-hidden border border-zinc-700 group shrink-0"
-        >
-          <img
-            src={src}
-            alt={`ref-${i}`}
-            className="object-cover w-full h-full"
-          />
+    <div className="rounded-2xl bg-zinc-900/70 backdrop-blur-sm shadow-lg transition-all duration-300">
+      {/* Top Section */}
+      <div className="flex flex-col gap-3 px-4 pt-4 pb-2">
+        {/* Image previews */}
+        {referenceImages.length > 0 && (
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent pb-1">
+            {referenceImages.map((src, i) => (
+              <div
+                key={i}
+                className="relative w-20 h-20 rounded-lg overflow-hidden border border-zinc-700 group shrink-0"
+              >
+                <img
+                  src={src}
+                  alt={`ref-${i}`}
+                  className="object-cover w-full h-full"
+                />
+                <button
+                  onClick={() =>
+                    setReferenceImages(referenceImages.filter((_, idx) => idx !== i))
+                  }
+                  className="absolute top-1 right-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Upload + Textarea + Wand */}
+        <div className="flex items-start gap-3">
+          {/* Upload Button */}
+          <div className="flex items-start">
+            <button
+              onClick={handleFileUpload}
+              className="p-2 hover:bg-zinc-800 rounded-lg transition shrink-0"
+              title="Upload image"
+            >
+              <Plus className="w-5 h-5 text-white" />
+            </button>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleFileChange}
+              className="hidden"
+            />
+          </div>
+
+          {/* Textarea */}
+          <div className="flex-1 flex items-center">
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Describe your image..."
+              disabled={loading}
+              rows={1}
+              className="w-full bg-transparent text-base text-zinc-200 outline-none resize-none placeholder:text-zinc-500 disabled:opacity-50 px-3 py-2 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent scrollbar-thumb-rounded-full"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                  onGenerate();
+                }
+              }}
+              style={{ height: "auto", minHeight: "40px" }}
+              onInput={(e) => {
+                const target = e.target as HTMLTextAreaElement;
+                target.style.height = "auto";
+                target.style.height = `${Math.min(target.scrollHeight, 360)}px`;
+              }}
+            />
+          </div>
+
+          {/* Wand Icon */}
+          <div className="flex items-center">
+            <button
+              onClick={() => setEnhancePrompt(!enhancePrompt)}
+              className={`p-2 rounded-lg transition shrink-0 ${
+                enhancePrompt
+                  ? "bg-purple-500/20 text-purple-400"
+                  : "hover:bg-zinc-800 text-zinc-400"
+              }`}
+              title="Toggle Enhance Prompt"
+            >
+              <Wand2 className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Error message */}
+        {error && (
+          <div className="text-red-400 text-sm px-3">
+            {error}
+          </div>
+        )}
+      </div>
+
+      {/* Bottom Controls */}
+      <div className="flex items-center justify-between px-4 pb-4">
+        <div className="flex items-center gap-2">
+          {/* Aspect Ratio */}
+          <div className="relative">
+            <button
+              onClick={() => setShowAspectRatio(!showAspectRatio)}
+              disabled={loading}
+              className="px-3 py-1.5 rounded-lg bg-transparent backdrop-blur-md border border-white/10 hover:border-white/20 transition text-sm text-white/80 flex items-center gap-1 disabled:opacity-50"
+            >
+              <span>{aspectRatio}</span>
+              <ChevronUp className="w-4 h-4" />
+            </button>
+
+            {showAspectRatio && (
+              <div className="absolute bottom-full left-0 mb-1 bg-zinc-900/80 backdrop-blur-xl border border-white/10 rounded-lg shadow-lg overflow-hidden z-50 min-w-[100px]">
+                {ASPECT_RATIOS.map((ratio) => (
+                  <button
+                    key={ratio.value}
+                    onClick={() => {
+                      setAspectRatio(ratio.value as any);
+                      setShowAspectRatio(false);
+                    }}
+                    className={`w-full px-3 py-2 text-left text-sm transition ${
+                      aspectRatio === ratio.value
+                        ? "bg-white/10 text-white"
+                        : "text-zinc-300 hover:bg-white/5"
+                    }`}
+                  >
+                    {ratio.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Variations */}
+          <div className="relative">
+            <button
+              onClick={() => setShowVariations(!showVariations)}
+              disabled={loading}
+              className="px-3 py-1.5 rounded-lg bg-transparent backdrop-blur-md border border-white/10 hover:border-white/20 transition text-sm text-white/80 flex items-center gap-1 disabled:opacity-50"
+            >
+              <span>{numberOfImages}V</span>
+              <ChevronUp className="w-4 h-4" />
+            </button>
+
+            {showVariations && (
+              <div className="absolute bottom-full left-0 mb-1 bg-zinc-900/80 backdrop-blur-xl border border-white/10 rounded-lg shadow-lg overflow-hidden z-50 min-w-[100px]">
+                {[1, 2, 3, 4].map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => {
+                      setNumberOfImages(n);
+                      setShowVariations(false);
+                    }}
+                    className={`w-full px-3 py-2 text-left text-sm transition ${
+                      numberOfImages === n
+                        ? "bg-white/10 text-white"
+                        : "text-zinc-300 hover:bg-white/5"
+                    }`}
+                  >
+                    {n} Variation{n > 1 ? "s" : ""}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Food Mode */}
           <button
-            onClick={() =>
-              setReferenceImages(referenceImages.filter((_, idx) => idx !== i))
-            }
-            className="absolute top-1 right-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition"
+            onClick={() => setFoodMode(!foodMode)}
+            disabled={loading}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium backdrop-blur-md border transition flex items-center gap-2 disabled:opacity-50 ${
+              foodMode
+                ? "bg-orange-500/10 text-orange-400 border-orange-500/30"
+                : "bg-transparent border-white/10 text-white/70 hover:border-white/20"
+            }`}
           >
-            ✕
+            <ChefHat className="w-4 h-4" />
+            <span>Food Mode</span>
           </button>
         </div>
-      ))}
-    </div>
-  )}
 
-  {/* Upload + Textarea + Wand */}
-  <div className="flex items-start gap-3">
-    {/* Upload Button */}
-    <div className="flex items-start">
-      <button
-        onClick={handleFileUpload}
-        className="p-2 hover:bg-zinc-800 rounded-lg transition shrink-0"
-        title="Upload image"
-      >
-        <Plus className="w-5 h-5 text-white" />
-      </button>
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        onChange={handleFileChange}
-        className="hidden"
-      />
-    </div>
-
-    {/* Textarea — expands to fill available space */}
-    <div className="flex-1 flex items-center">
-      <textarea
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-        placeholder="Describe your image..."
-        disabled={loading}
-        rows={1}
-        className="w-full bg-transparent text-base text-zinc-200 outline-none resize-none placeholder:text-zinc-500 disabled:opacity-50 px-3 py-2 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent scrollbar-thumb-rounded-full"
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-            onGenerate();
-          }
-        }}
-        style={{ height: "auto", minHeight: "40px" }}
-        onInput={(e) => {
-          const target = e.target as HTMLTextAreaElement;
-          target.style.height = "auto";
-          target.style.height = `${Math.min(target.scrollHeight, 360)}px`;
-        }}
-      />
-    </div>
-
-    {/* Wand Icon */}
-    <div className="flex items-center">
-      <button
-        onClick={() => setEnhancePrompt(!enhancePrompt)}
-        className={`p-2 rounded-lg transition shrink-0 ${
-          enhancePrompt
-            ? "bg-purple-500/20 text-purple-400"
-            : "hover:bg-zinc-800 text-zinc-400"
-        }`}
-        title="Toggle Enhance Prompt"
-      >
-        <Wand2 className="w-5 h-5" />
-      </button>
-    </div>
-    </div>
-
-
-  </div>
-{/* Bottom Controls */}
-<div className="flex items-center justify-between px-4 pb-4">
-  <div className="flex items-center gap-2">
-    {/* Aspect Ratio */}
-    <div className="relative">
-      <button
-        onClick={() => setShowAspectRatio(!showAspectRatio)}
-        disabled={loading}
-        className="px-3 py-1.5 rounded-lg bg-transparent backdrop-blur-md border border-white/10 hover:border-white/20 transition text-sm text-white/80 flex items-center gap-1"
-      >
-        <span>{aspectRatio}</span>
-        <ChevronUp className="w-4 h-4" />
-      </button>
-
-      {showAspectRatio && (
-        <div className="absolute bottom-full left-0 mb-1 bg-zinc-900/80 backdrop-blur-xl border border-white/10 rounded-lg shadow-lg overflow-hidden z-50 min-w-[100px]">
-          {ASPECT_RATIOS.map((ratio) => (
-            <button
-              key={ratio.value}
-              onClick={() => {
-                setAspectRatio(ratio.value as any);
-                setShowAspectRatio(false);
-              }}
-              className={`w-full px-3 py-2 text-left text-sm transition ${
-                aspectRatio === ratio.value
-                  ? "bg-white/10 text-white"
-                  : "text-zinc-300 hover:bg-white/5"
-              }`}
-            >
-              {ratio.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-
-    {/* Variations (image count) as popover */}
-    <div className="relative">
-  <button
-    onClick={() => setShowVariations(!showVariations)}
-    disabled={loading}
-    className="px-3 py-1.5 rounded-lg bg-transparent backdrop-blur-md border border-white/10 hover:border-white/20 transition text-sm text-white/80 flex items-center gap-1"
-  >
-    <span>{numberOfImages}V</span>
-    <ChevronUp className="w-4 h-4" />
-  </button>
-
-  {showVariations && (
-    <div className="absolute bottom-full left-0 mb-1 bg-zinc-900/80 backdrop-blur-xl border border-white/10 rounded-lg shadow-lg overflow-hidden z-50 min-w-[100px]">
-      {[1, 2, 3, 4].map((n) => (
+        {/* Generate Button */}
         <button
-          key={n}
-          onClick={() => {
-            setNumberOfImages(n);
-            setShowVariations(false);
-          }}
-          className={`w-full flex px-2 py-2 text-left text-sm transition ${
-            numberOfImages === n
-              ? "bg-white/10 text-white"
-              : "text-zinc-300 hover:bg-white/5"
-          }`}
+          onClick={onGenerate}
+          disabled={loading || !prompt.trim()}
+          className="px-5 py-2 rounded-full bg-white cursor-pointer disabled:cursor-not-allowed disabled:text-zinc-500 disabled:bg-zinc-800 text-black text-sm font-medium flex items-center gap-2 transition"
         >
-          {n} Variations
+          {loading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Generating</span>
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4" />
+              <span>Generate</span>
+            </>
+          )}
         </button>
-      ))}
-    </div>
-  )}
-</div>
+      </div>
 
-    {/* Food Mode */}
-    <button
-      onClick={() => setFoodMode(!foodMode)}
-      disabled={loading}
-      className={`px-3 py-1.5 rounded-lg text-sm font-medium backdrop-blur-md border transition flex items-center gap-2 ${
-        foodMode
-          ? "bg-orange-500/10 text-orange-400 border-orange-500/30"
-          : "bg-transparent border-white/10 text-white/70 hover:border-white/20"
-      }`}
-    >
-      <ChefHat className="w-4 h-4" />
-      <span>Food Mode</span>
-    </button>
-  </div>
-
-  {/* Generate Button */}
-  <button
-    onClick={onGenerate}
-    disabled={loading || !prompt.trim()}
-    className="px-5 py-2 rounded-full bg-white cursor-pointer disabled:cursor-auto disabled:text-[#5F5F5F] disabled:bg-[#1f1f1f] text-black text-sm font-medium flex items-center gap-2 transition"
-  >
-    {loading ? (
-      <>
-        <Loader2 className="w-4 h-4 animate-spin" />
-        <span>Generating</span>
-      </>
-    ) : (
-      <>
-        <Sparkles className="w-4 h-4" />
-        <span>Generate</span>
-      </>
-    )}
-  </button>
-</div>
       {/* Cuisine Selector */}
       {foodMode && (
         <div className="px-6 pb-6 border-t border-zinc-800 pt-4">
@@ -301,7 +310,7 @@ const [showVariations, setShowVariations] = useState(false);
                 key={cuisine.id}
                 onClick={() => setSelectedCuisine(cuisine.id)}
                 disabled={loading}
-                className={`p-3 rounded-xl border transition-all ${
+                className={`p-3 rounded-xl border transition-all disabled:opacity-50 ${
                   selectedCuisine === cuisine.id
                     ? "border-orange-500 bg-orange-500/20"
                     : "border-zinc-800 bg-zinc-800/50 hover:bg-zinc-800"

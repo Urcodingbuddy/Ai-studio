@@ -16,11 +16,11 @@ export async function POST(req: Request) {
       dishName,
       numberOfImages = 1,
       aspectRatio = "1:1",
-      guidanceScale = 7.5,
       foodMode = false,
       enhancePrompt = true,
       referenceImages = [],
     } = await req.json();
+
     if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
       return NextResponse.json(
         { success: false, error: "Prompt is required" },
@@ -65,21 +65,21 @@ export async function POST(req: Request) {
     const ai = new GoogleGenAI({ apiKey });
     let enhancedPrompt = prompt.trim();
 
-   if (enhancePrompt) {
-  try {
-    const context = foodMode
-      ? "Enhance this prompt for professional restaurant food photography — focus on realistic lighting, texture, plating, and depth."
-      : "Enhance this prompt for high-quality, visually detailed, photorealistic imagery.";
+    // Enhance prompt if enabled
+    if (enhancePrompt) {
+      try {
+        const context = foodMode
+          ? "Enhance this prompt for professional restaurant food photography — focus on realistic lighting, texture, plating, and depth."
+          : "Enhance this prompt for high-quality, visually detailed, photorealistic imagery.";
 
-    const enhancement = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [
-        {
-          role: "user",
-          parts: [
+        const enhancement = await ai.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: [
             {
-              text: `
-You are an image-prompt enhancement engine.
+              role: "user",
+              parts: [
+                {
+                  text: `You are an image-prompt enhancement engine.
 
 RULES:
 1. Output ONLY the enhanced prompt text.
@@ -97,91 +97,94 @@ ${context}
 USER PROMPT:
 "${prompt}"
 
-RETURN ONLY THE ENHANCED PROMPT:
-`
-            }
-          ]
+RETURN ONLY THE ENHANCED PROMPT:`,
+                },
+              ],
+            },
+          ],
+        });
+
+        const text = enhancement.candidates?.[0]?.content?.parts
+          ?.map((p: any) => p.text)
+          .filter(Boolean)
+          .join(" ");
+
+        if (text && typeof text === "string") {
+          enhancedPrompt = text.trim();
         }
-      ]
-    });
-
-    // ----------------------------------------
-    // FIX: cast to any so TS stops complaining
-    // ----------------------------------------
-    const out =
-      (enhancement as any).output_text ??
-      (enhancement as any).candidates?.[0]?.content?.parts
-        ?.map((p: any) => p.text)
-        .join(" ");
-
-    if (out && typeof out === "string") {
-      enhancedPrompt = out.trim();
+      } catch (err) {
+        console.warn("Prompt enhancement failed, using original prompt");
+      }
     }
-  } catch (err) {
-    console.warn("Prompt enhancement failed, fallback to original prompt");
-  }
-}
 
-
-    const basePrompt = foodMode
-      ? `Restaurant-style photograph of ${
-          dishName || "a dish"
-        } — ${enhancedPrompt}`
+    // Build final prompt
+    const finalPrompt = foodMode
+      ? `Restaurant-style photograph of ${dishName || "a dish"} — ${enhancedPrompt}`
       : enhancedPrompt;
 
-    const imageParts: any[] = [{ text: basePrompt }];
+    // Prepare content parts with reference images if provided
+    const contentParts: any[] = [{ text: finalPrompt }];
+    
     for (const img of referenceImages) {
       if (typeof img === "string" && img.startsWith("data:image/")) {
         const [meta, base64Data] = img.split(",");
         const mimeType =
           meta.match(/data:(image\/[a-zA-Z+]+);base64/)?.[1] || "image/png";
-        imageParts.push({
+        contentParts.push({
           inlineData: { mimeType, data: base64Data },
         });
       }
     }
 
-    const response = await ai.models.generateImages({
-      model: "imagen-4.0-ultra-generate-001",
-      prompt: basePrompt,
-      config: {
-        numberOfImages,
-        aspectRatio,
-        guidanceScale,
-        imageSize: "2K",
-        ...(imageParts.length > 1 ? { references: imageParts } : {}), // attach refs only if available
-      },
-    });
+    const publicUrls: string[] = [];
 
-    if (!response?.generatedImages?.length) {
+    // Generate images (one at a time for multiple variations)
+    for (let i = 0; i < numberOfImages; i++) {
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash-image",
+        contents: contentParts,
+      });
+
+      // Extract image from response parts
+      const responseParts = response.candidates?.[0]?.content?.parts || [];
+      
+      for (const part of responseParts) {
+        if (part.inlineData?.data) {
+          const imageData = part.inlineData.data;
+          const buffer = Buffer.from(imageData, "base64");
+          const filePath = `${user.id}/${Date.now()}_${i + 1}.png`;
+
+          const { error: uploadErr } = await supabaseAdmin.storage
+            .from("generations")
+            .upload(filePath, buffer, { contentType: "image/png", upsert: true });
+
+          if (uploadErr) {
+            console.error("Upload error:", uploadErr);
+            continue;
+          }
+
+          const { data: pub } = supabaseAdmin.storage
+            .from("generations")
+            .getPublicUrl(filePath);
+
+          if (pub?.publicUrl) {
+            publicUrls.push(pub.publicUrl);
+          }
+        }
+      }
+    }
+
+    if (publicUrls.length === 0) {
       return NextResponse.json(
         { success: false, error: "Image generation failed" },
         { status: 500 }
       );
     }
 
-    const publicUrls: string[] = [];
-    for (let i = 0; i < response.generatedImages.length; i++) {
-      const imgBytes = response.generatedImages[i]?.image?.imageBytes;
-      if (!imgBytes) continue;
-
-      const buffer = Buffer.from(imgBytes, "base64");
-      const filePath = `${user.id}/${Date.now()}_${i + 1}.png`;
-
-      const { error: uploadErr } = await supabaseAdmin.storage
-        .from("generations")
-        .upload(filePath, buffer, { contentType: "image/png", upsert: true });
-      if (uploadErr) throw uploadErr;
-
-      const { data: pub } = supabaseAdmin.storage
-        .from("generations")
-        .getPublicUrl(filePath);
-      if (pub?.publicUrl) publicUrls.push(pub.publicUrl);
-    }
-
     let recipe: string | null = null;
     let ingredients: string | null = null;
 
+    // Generate recipe if in food mode
     if (foodMode && dishName) {
       try {
         const recipeRes = await ai.models.generateContent({
@@ -205,16 +208,12 @@ Recipe:
           ],
         });
 
-        const text =
-          (recipeRes as any).output_text ??
-          (recipeRes as any).candidates?.[0]?.content?.parts
-            ?.map((p: any) => p.text)
-            .join("\n") ??
-          "";
+        const text = recipeRes.candidates?.[0]?.content?.parts
+          ?.map((p: any) => p.text)
+          .filter(Boolean)
+          .join("\n") ?? "";
 
-        const ingMatch = text.match(
-          /Ingredients:\s*([\s\S]*?)(?:\nRecipe:|$)/i
-        );
+        const ingMatch = text.match(/Ingredients:\s*([\s\S]*?)(?:\nRecipe:|$)/i);
         const recMatch = text.match(/Recipe:\s*([\s\S]*?)$/i);
 
         ingredients = ingMatch?.[1]?.trim() || null;
@@ -224,13 +223,14 @@ Recipe:
       }
     }
 
+    // Save to database
     try {
       await supabaseAdmin.from("generations").insert([
         {
           user_id: user.id,
           original_prompt: prompt,
           enhanced_prompt: enhancedPrompt,
-          model: "imagen-4.0-ultra-generate-001",
+          model: "gemini-2.5-flash-image",
           image_path: publicUrls.join(","),
           visibility: "private",
           created_at: new Date().toISOString(),
